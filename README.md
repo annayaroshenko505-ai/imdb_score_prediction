@@ -1,22 +1,27 @@
-# IMDb Score Prediction - Movie Data Analysis
+# IMDb Score Prediction – Exploratory Data Analysis and Machine Learning
 
-## Projektbeschreibung
+## Projektübersicht
 
-In diesem Projekt wird untersucht, inwieweit sich IMDb-Bewertungen von Filmen anhand verschiedener Merkmale vorhersagen lassen. Dazu wird ein Regressionsmodell mit Python und Scikit-learn entwickelt.
+In diesem Projekt wird untersucht, wie gut sich IMDb-Bewertungen von Filmen anhand verschiedener Metadaten vorhersagen lassen.
 
-**Ziel:** Vorhersage des IMDb-Scores eines Films auf Basis seiner verfügbaren Metadaten.
+Ein besonderer Schwerpunkt liegt auf dem Umgang mit fehlenden Werten, schiefen Verteilungen, Ausreißern, seltenen Kategorien und potenzieller Multikollinearität.
+
+**Ziel:** Vorhersage des IMDb-Scores eines Films auf Basis seiner verfügbaren Merkmale und Vergleich verschiedener Regressionsansätze.
 
 ## Datensatz
 
-Das Projekt verwendet den Datensatz `movie_metadata.csv`, der Informationen über Filme enthält, darunter:
+Verwendet wird der Datensatz `movie_metadata.csv` mit Informationen zu Filmen, Schauspielern, Regisseuren, Genres und weiteren Metadaten.
 
-- **Bewertung:** `imdb_score`
-- **Filminformationen:** Laufzeit, Erscheinungsjahr, Budget und Einnahmen
-- **Besetzung und Regie:** Schauspieler und Regisseur
-- **Soziale Interaktionen:** Facebook-Likes
-- **Kategorische Merkmale:** Genre, Sprache, Land und Altersfreigabe
+Die verwendeten Merkmale umfassen unter anderem:
 
-Der Datensatz enthält fehlende Werte, unterschiedlich skalierte numerische Variablen und teilweise stark schiefe Verteilungen.
+- **Filminformationen:** Laufzeit, Erscheinungsjahr, Budget, Einnahmen und Seitenverhältnis
+- **Bewertungen und Popularität:** Anzahl der IMDb-Stimmen und Facebook-Likes
+- **Besetzung und Produktion:** Facebook-Likes der Schauspieler und des gesamten Casts
+- **Kategorische Merkmale:** Genre, Sprache, Produktionsland, Altersfreigabe und Farbformat
+
+Die Zielvariable ist `imdb_score`.
+
+Der Datensatz enthält fehlende Werte, stark rechtsschiefe numerische Variablen sowie seltene Kategorien und potenzielle Ausreißer.
 
 ## Technologien
 
@@ -26,131 +31,173 @@ Der Datensatz enthält fehlende Werte, unterschiedlich skalierte numerische Vari
 - Scikit-learn
 - Jupyter Notebook
 
-## Projektablauf
+## Projektworkflow
 
 ### 1. Explorative Datenanalyse (EDA)
 
+Zunächst werden die Struktur, die Verteilungen und die Zusammenhänge innerhalb des Datensatzes untersucht.
+
 Die Analyse umfasst:
 
-- Anzahl der Zeilen und Spalten
-- Datentypen und fehlende Werte
+- Untersuchung der Datensatzstruktur und Datentypen
+- Analyse fehlender Werte
 - Deskriptive Statistiken
-- Verteilung der IMDb-Scores
-- Korrelationen zwischen numerischen Features und dem IMDb-Score
-- Scatterplots zur Untersuchung möglicher Zusammenhänge
-- Korrelationsmatrix zur Analyse der Beziehungen zwischen numerischen Variablen
+- Visualisierung der IMDb-Score-Verteilung
+- Korrelationsanalyse numerischer Features
+- Scatterplots zur Untersuchung von Zusammenhängen zwischen Features und IMDb-Score
+- Korrelations-Heatmaps
+- Boxplots zur Identifikation potenzieller Ausreißer
+- Berechnung des prozentualen Anteils an Ausreißern anhand der IQR-Methode
 
-Zusätzlich wird untersucht, ob eine logarithmische Transformation von `num_voted_users` den Zusammenhang mit dem IMDb-Score besser sichtbar macht.
+### 2. Data Cleaning und Feature Selection
 
-### 2. Data Cleaning
+Vor der Modellierung werden doppelte Einträge entfernt und ausgewählte Merkmale ausgeschlossen.
 
-Vor dem Modelltraining werden die Daten bereinigt.
+Die Spalten `movie_title`, `plot_keywords` und `movie_imdb_link` werden entfernt, da sie für das Basismodell nicht direkt benötigt werden.
 
-Die wichtigsten Schritte sind:
+Die Namen von Regisseuren und Schauspielern werden ebenfalls ausgeschlossen, um die hohe Dimensionalität durch zahlreiche individuelle Kategorien zu begrenzen.
 
-- Entfernen doppelter Zeilen
-- Entfernen nicht benötigter oder potenziell problematischer Features
-- Vereinfachung der Genre-Informationen durch Auswahl des ersten Genres als `main_genre`
+Ziel ist ein übersichtlicheres Feature-Set, das sich für den Vergleich verschiedener Regressionsmodelle eignet.
 
-Folgende Spalten werden entfernt:
+### 3. Aufteilung in Train, Validation und Test
 
-- `movie_title`
-- `movie_imdb_link`
-- `plot_keywords`
-- `actor_1_facebook_likes`
-- `actor_2_facebook_likes`
-- `actor_3_facebook_likes`
-- `facenumber_in_poster`
-- `num_user_for_reviews`
-- `director_facebook_likes`
-- `num_critic_for_reviews`
-
-Die Auswahl berücksichtigt die Relevanz der Features, mögliche Datenqualitätsprobleme und das Risiko von Data Leakage.
-
-### 3. Definition der Zielvariable und Features
-
-Die Zielvariable ist:
-
-`imdb_score`
-
-### 4. Aufteilung der Daten
-
-Der Datensatz wird in drei Teilmengen aufgeteilt:
+Der bereinigte Datensatz wird in drei Teilmengen aufgeteilt:
 
 | Training | 60 % 
 | Validation | 20 % 
 | Test | 20 % 
 
-### 5. Umgang mit fehlenden Werten
+Die Preprocessing-Parameter werden anhand der Trainingsdaten bestimmt und anschließend auf die Validation- und Testdaten angewendet.
+
+### 4. Umgang mit seltenen Kategorien
+
+Kategorische Merkmale wie `country`, `language` und `content_rating` enthalten teilweise sehr seltene Ausprägungen.
+
+Um die Anzahl wenig repräsentierter Kategorien zu reduzieren und potenzielles Overfitting zu begrenzen, werden Kategorien mit weniger als 50 Beobachtungen im Trainingsdatensatz zu `Other` zusammengefasst.
+
+Die Gruppierung basiert ausschließlich auf den Trainingsdaten.
+
+### 5. Genre-Encoding
+
+Die Spalte `genres` enthält mehrere Genres pro Film, die durch das Zeichen `|` getrennt sind.
+
+Da ein Film mehreren Genres gleichzeitig angehören kann, wird `MultiLabelBinarizer` für das Multi-Hot-Encoding verwendet.
+
+Dadurch wird jedes Genre als eigenes binäres Feature dargestellt. Ein Film kann somit für mehrere Genre-Features gleichzeitig den Wert 1 erhalten.
+
+Der Encoder wird ausschließlich auf den Trainingsdaten angepasst und anschließend auf Validation und Test angewendet.
+
+### 6. Behandlung fehlender Werte
 
 Fehlende Werte werden abhängig vom Datentyp behandelt:
 
-- **Numerische Features:** Ersetzung durch den Median
-- **Kategorische Features:** Ersetzung durch den häufigsten Wert (Modus)
+- **Numerische Features:** Imputation mit dem Median
+- **Kategorische Features:** Imputation mit dem häufigsten Wert (Modus)
 
-Die Imputationswerte werden ausschließlich aus den Trainingsdaten berechnet und anschließend auf die Validation- und Testdaten angewendet. Dadurch wird Data Leakage bei der Imputation vermieden.
+Die Imputationswerte werden ausschließlich aus dem Trainingsdatensatz berechnet, um Data Leakage durch die Verwendung von Informationen aus Validation oder Test zu vermeiden.
 
-### 6. Feature Transformation und Encoding
+### 7. Logarithmische Transformation
 
-Um stark rechtsschiefe Verteilungen zu reduzieren, werden folgende Features logarithmisch transformiert:
+Stark rechtsschiefe numerische Features werden anhand ihrer Schiefe (Skewness) identifiziert.
 
-- `budget`
-- `movie_facebook_likes`
-- `cast_total_facebook_likes`
+Features mit einer Skewness größer als 1 werden zunächst als potenzielle Kandidaten ausgewählt. Anschließend wird geprüft, ob eine logarithmische Transformation inhaltlich sinnvoll ist.
 
-Kategorische Variablen werden anschließend mithilfe von One-Hot-Encoding in numerische Features umgewandelt. 
+Nichtnegative Features werden bei Bedarf mit `np.log1p()` transformiert. Bestimmte strukturelle oder begrenzte Variablen, beispielsweise `duration`, `aspect_ratio` und `facenumber_in_poster`, werden von dieser Transformation ausgeschlossen.
 
-Da die verschiedenen Datensätze nach dem Encoding unterschiedliche Kategorien enthalten können, werden die Validation- und Testdaten an die Spalten des Trainingsdatensatzes angepasst. Fehlende Dummy-Spalten werden mit Nullen ergänzt.
+Ziel ist es, extreme Werte weniger dominant zu machen und die Modellierung stark schiefer Verteilungen zu verbessern.
 
-### 7. Feature Scaling
+### 8. One-Hot-Encoding und Feature Alignment
 
-Die numerisch kodierten Features werden mit `StandardScaler` standardisiert.
+Die verbleibenden kategorischen Merkmale werden mithilfe von One-Hot-Encoding in numerische Features umgewandelt.
 
-Der Scaler wird ausschließlich auf den Trainingsdaten trainiert. Die gleichen Skalierungsparameter werden anschließend auf die Validation- und Testdaten angewendet.
+### 9. Feature Scaling
 
-### 8. Modellierung
+Für die numerischen Features wird `RobustScaler` verwendet.
 
-Es werden zwei Modelle betrachtet.
+Im Gegensatz zur Standardisierung mit `StandardScaler` basiert `RobustScaler` auf dem Median und dem Interquartilsabstand (IQR). Dadurch reagiert er weniger empfindlich auf extreme Werte.
 
-**Baseline – DummyRegressor**
+Der Scaler wird ausschließlich auf den numerischen Features des Trainingsdatensatzes trainiert. Die gleichen Parameter werden auf Validation und Test angewendet.
 
-Ein einfaches Referenzmodell sagt für jeden Film den durchschnittlichen IMDb-Score der Trainingsdaten voraus.
+Die binären Features aus dem Genre-Encoding und One-Hot-Encoding bleiben unverändert.
 
-Die Baseline dient als Vergleichspunkt, um festzustellen, ob das trainierte Modell bessere Vorhersagen liefert als eine konstante Vorhersage.
+## Modellierung
 
-**Lineare Regression – LinearRegression**
+Es werden vier Regressionsansätze betrachtet.
 
-Als Machine-Learning-Modell wird eine lineare Regression verwendet. Sie soll den IMDb-Score anhand der aufbereiteten Features vorhersagen.
+### 1. Dummy Regressor – Baseline
 
-Das Modell wird auf den skalierten Trainingsdaten trainiert.
+Der `DummyRegressor` mit `strategy="mean"` sagt für jeden Film den durchschnittlichen IMDb-Score der Trainingsdaten voraus.
 
-### 9. Evaluation
+Dieses Modell dient als einfache Referenz, um zu überprüfen, ob die komplexeren Modelle einen tatsächlichen Vorhersagegewinn erzielen.
 
-Die Modellleistung wird anhand von drei Metriken bewertet:
+### 2. Lineare Regression
 
-| Metrik | Bedeutung |
+Die lineare Regression modelliert den Zusammenhang zwischen den Features und dem IMDb-Score mithilfe einer linearen Funktion.
+
+Sie dient als einfaches interpretierbares Modell und als Ausgangspunkt für den Vergleich mit regularisierten und nichtlinearen Verfahren.
+
+### 3. Ridge Regression
+
+Die Ridge Regression erweitert die lineare Regression um eine L2-Regularisierung.
+
+Durch die Bestrafung großer Koeffizienten soll das Modell stabiler werden und weniger stark auf einzelne Features reagieren.
+
+Dies ist insbesondere bei vielen korrelierten Features und einer hohen Anzahl von Dummy-Variablen relevant.
+
+Für das Modell wird zunächst `alpha=1.0` verwendet.
+
+Zusätzlich werden die Koeffizienten untersucht und visualisiert, um Features mit besonders großen positiven oder negativen Modellkoeffizienten zu identifizieren.
+
+### 4. Random Forest Regressor
+
+Als nichtlinearer Ansatz wird ein `RandomForestRegressor` trainiert.
+
+Die Hyperparameter werden mithilfe von `GridSearchCV` und einer fünffachen Kreuzvalidierung optimiert.
+
+Untersucht werden folgende Parameter:
+
+| Hyperparameter | Werte |
 |---|---|
-| MSE – Mean Squared Error | Mittlerer quadratischer Vorhersagefehler; kleinere Werte sind besser. |
-| MAE – Mean Absolute Error | Mittlere absolute Abweichung zwischen vorhergesagten und tatsächlichen IMDb-Scores; kleinere Werte sind besser. |
-| R² – Bestimmtheitsmaß | Beschreibt, wie viel Varianz der Zielvariable durch das Modell erklärt wird. Höhere Werte sind im Allgemeinen besser. |
+| `n_estimators` | 100, 200 |
+| `max_depth` | None, 10, 20 |
+| `min_samples_split` | 2, 5 |
+| `min_samples_leaf` | 1, 2 |
 
-Die Evaluation erfolgt zunächst auf den Validation-Daten und anschließend auf den Testdaten.
+Als Optimierungskriterium dient \(R^2\).
 
-## Projektstruktur
+Nach der Hyperparametersuche wird das beste Modell ausgewählt und auf den Validation- und Testdaten bewertet.
 
-```text
-project/
-├── movie_metadata.csv
-├── imdb_score_prediction.ipynb
-└── README.md
-```
+Zusätzlich werden die Feature Importances analysiert, um die für den Random Forest wichtigsten Merkmale zu identifizieren.
 
-## Ziel und mögliche Erweiterungen
+## Evaluation
 
-Mögliche Erweiterungen:
+Die Modelle werden anhand von drei Regressionsmetriken bewertet:
 
-- Vergleich zusätzlicher Regressionsmodelle, beispielsweise Ridge Regression und Random Forest
-- Untersuchung nichtlinearer Zusammenhänge
-- Vergleich der Modelle anhand derselben Evaluation-Metriken
+| Metrik | Interpretation |
+|---|---|
+| MAE – Mean Absolute Error | Mittlere absolute Abweichung zwischen Vorhersage und tatsächlichem IMDb-Score |
+| MSE – Mean Squared Error | Mittlerer quadratischer Vorhersagefehler; große Fehler werden stärker gewichtet |
+| R² – Bestimmtheitsmaß | Misst, wie gut das Modell die Varianz der Zielvariable erklärt |
 
+Für MAE und MSE sind kleinere Werte besser. Für \(R^2\) sind höhere Werte im Allgemeinen besser.
+
+Die Validation-Daten dienen der Bewertung und dem Vergleich der Modelle. Die Testdaten werden für die abschließende Einschätzung der Generalisierungsleistung verwendet.
+
+## Analyse der Modellkoeffizienten und Feature Importances
+
+Die Ridge-Koeffizienten ermöglichen eine Untersuchung der Richtung und Stärke der modellierten Zusammenhänge.
+
+Positive Koeffizienten stehen bei ansonsten konstanten Features für höhere vorhergesagte IMDb-Scores, negative Koeffizienten für niedrigere Vorhersagen.
+
+Die Feature Importances des Random Forest zeigen, welche Merkmale für die Vorhersagen des trainierten Modells besonders relevant sind.
+
+## Mögliche Einschränkungen
+
+Die Ergebnisse hängen von der Qualität und Zusammensetzung des Datensatzes sowie von der Auswahl und Aufbereitung der Features ab.
+
+Besonders wichtig ist die zeitliche Verfügbarkeit der Merkmale: Variablen wie Einnahmen oder die Anzahl der IMDb-Stimmen sind möglicherweise erst nach Veröffentlichung eines Films bekannt. Werden sie zur Vorhersage eines zukünftigen IMDb-Scores verwendet, kann dies zu einer unrealistischen Einschätzung der Vorhersageleistung führen.
+
+Daher muss die Feature-Auswahl zum konkreten Vorhersageszenario passen.
+
+Außerdem sollte die Hyperparameteroptimierung ausschließlich auf den Trainingsdaten erfolgen. Die Testdaten sollten nicht zur Modellauswahl verwendet werden.
 
